@@ -1,7 +1,8 @@
 from Queue import Queue
-from itertools import product
+from itertools import combinations, product
+from math import acos, pi
 
-MIN_LINE_LENGTH = 5
+MIN_LINE_LENGTH = 10
 
 # TODO: deal with 45 degree angles
 
@@ -32,24 +33,78 @@ def straight_lines(im, visual=False):
                 continue
             expanded.add((node.pixel))
             children = node.expand()
-            exps = 0
-            for child in children:
-                if (child.pixel) not in expanded:
-                    queue.put(child)
-                else:
-                    exps += 1
-            if len(children) == exps and node.length > MIN_LINE_LENGTH:
-                lines.append((node.root, node))
-    lines_by_se = {}
+            # if cannot expand
+            if len(children) == 0 or all(c in expanded for c in children):
+                expanded.remove(node.pixel)
+                if node.length > MIN_LINE_LENGTH:
+                    lines.append(node)
+            elif len(children) == 1:
+                queue.put(children[0])
+            else:
+                expanded.remove(node.pixel)
+                if node.length > MIN_LINE_LENGTH:
+                    lines.append(node)
+                for child in children:
+                    if child.pixel not in expanded:
+                        child.root = node
+                        child.length = 1
+                        queue.put(child)
+
+    lines_by_endpoints = {}
     for line in lines:
         try:
-            lines_by_se[(line[0].pixel, line[1].pixel)].append(line)
+            lines_by_endpoints[line.root.pixel].append(line)
         except KeyError:
-            lines_by_se[(line[0].pixel, line[1].pixel)] = [line]
-    for se in lines_by_se:
-        for line in lines_by_se[se][1:]:
-            lines.remove(line)
+            lines_by_endpoints[line.root.pixel] = [line]
+        try:
+            lines_by_endpoints[line.pixel].append(line)
+        except KeyError:
+            lines_by_endpoints[line.pixel] = [line]
+
+    for endpoint in lines_by_endpoints:
+        for pair in combinations(lines_by_endpoints[endpoint], 2):
+            if _should_combine(*pair):
+                if pair[0] not in lines or pair[1] not in lines:
+                    continue
+                # combine line
+                ends = [pair[0].root.pixel, pair[0].pixel,
+                        pair[1].root.pixel, pair[1].pixel]
+                ends = [e for e in ends if e != endpoint]
+                newroot = QueueObject(ends[0], None, None, None, 0, None)
+                new = QueueObject(ends[1], newroot, newroot, None,
+                                  pair[0].length + pair[1].length, None)
+                lines.remove(pair[0])
+                lines.remove(pair[1])
+                lines.append(new)
+                lines_by_endpoints[endpoint].remove(pair[0])
+                lines_by_endpoints[endpoint].remove(pair[1])
+                lines_by_endpoints[new.root.pixel].remove(pair[0])
+                lines_by_endpoints[new.root.pixel].append(new)
+                lines_by_endpoints[new.pixel].remove(pair[1])
+                lines_by_endpoints[new.pixel].append(new)
     return lines
+
+
+def _should_combine(node1, node2):
+    angle = _angle(node1, node2)
+    max_angle1 = _vangle([node1.length, 1], [1, 0])
+    max_angle2 = _vangle([node2.length, 1], [1, 0])
+    max_angle = 2 * (max_angle1 + max_angle2)
+    return angle <= max_angle or angle >= pi - max_angle
+
+
+def _angle(node1, node2):
+    v1 = map(int.__sub__, node1.root.pixel, node1.pixel)
+    v2 = map(int.__sub__, node2.root.pixel, node2.pixel)
+    return _vangle(v1, v2)
+
+
+def _vangle(v1, v2):
+    return acos(sum(map(int.__mul__, v1, v2))/_mag(v1)/_mag(v2))
+
+
+def _mag(v):
+    return (sum(map(lambda a: a*a, v)))**0.5
 
 
 class QueueObject(object):
@@ -95,11 +150,12 @@ class QueueObject(object):
         return children
 
     def __repr__(self):
-        dir_str = 'all' if len(self.directions) == 8 else str(self.directions)
-        return ''.join(('<',
-                        repr(self.pixel), ', ',
-                        repr(self.length), ', ',
-                        dir_str, '>'))
+        # dir_str = 'all' if len(self.directions) == 8 else str(self.directions)
+        # return ''.join(('<',
+        #                 repr(self.pixel), ', ',
+        #                 repr(self.length), ', ',
+        #                 dir_str, '>'))
+        return '<' + ' '.join((str(self.root.pixel), '->', str(self.pixel))) + '>'
 
 
 def _is_black(colour):
@@ -117,10 +173,8 @@ def _threshold(image, threshold=0.9):
         else:
             pa[p] = (255, 255, 255, 255)
     image = image.convert("1")
-    image.show()
     pa = image.load()
     zhangSuen(pa, image.size[0], image.size[1])
-    image.show()
     return image
 
 
@@ -174,18 +228,25 @@ def zhangSuen(image, width, height):
 if __name__ == '__main__':
     import sys
     from PIL import Image
+    from matplotlib import pyplot as plt
     for arg in sys.argv[1:]:
         im = Image.open(arg)
-        lines = straight_lines(im, True)
-        print arg, 'lines:', len(lines)
+        print arg,
+        lines = straight_lines(im)
+        print 'lines:', len(lines)
+        # print arg, [(node.root.pixel, node.pixel) for node in lines]
+
         im = Image.new("RGB", im.size)
         pa = im.load()
         for line in lines:
-            node = line[1]
+            plt.plot([line.root.pixel[0], line.pixel[0]],
+                     [-line.root.pixel[1], -line.pixel[1]])
+            node = line
             i = 0
             while node is not None:
-                tmp = (line[1].length - i) * 255 / line[1].length
+                tmp = (line.length - i) * 255 / line.length
                 pa[node.pixel] = (tmp, 255-tmp, 0)
                 node = node.parent
                 i += 1
         im.show()
+        plt.show()
