@@ -3,6 +3,8 @@
 import numpy as np
 from random import randint
 from itertools import count
+import re
+import os
 
 solid_id = count(1)
 side_id = count(1)
@@ -20,11 +22,79 @@ def _random_joined_lines(n):
         last_end = new_end
 
 
-class VMF(object):
+class VMFObject(object):
+
+    def __init__(self, name):
+        super(VMFObject, self).__init__()
+        self.name = name
+        self.attributes = {}
+        self.children = []
+
+    def __repr__(self):
+        out = [self.name, '{']
+        for k, v in self.attributes.iteritems():
+            out.append('"{0}" "{1}"'.format(k, v))
+        for child in self.children:
+            out.append(str(child))
+        out.append('}')
+        return '\r\n'.join(out)
+
+
+class VMF(VMFObject):
     """Holds a VMF file"""
-    def __init__(self, filename):
-        super(VMF, self).__init__()
+
+    def __init__(self, filename, dedot=False):
+        super(VMF, self).__init__('')
+        if os.path.splitext(filename)[1] != '.vmf':
+            filename += '.vmf'
+        head, tail = os.path.split(filename)
+        if '.' in os.path.splitext(tail)[0]:
+            if dedot:
+                tail = tail.split('.')[0]
+                tail += '.vmf'
+                filename = os.path.join(head, tail)
+            else:
+                raise DotInFilenameError(filename)
         self.filename = filename
+        try:
+            f = file(filename)
+            m = re.search(r'"mapversion" "(\d+)"', f.read())
+            self.version = int(m.group(1))
+        except:
+            self.version = 0
+        vinfo = VMFObject("versioninfo")
+        vinfo.attributes['mapversion'] = self.version
+        self.children.append(vinfo)
+        world = VMFObject("world")
+        self.world = world
+        self.children.append(world)
+        world.attributes = {'detailvbsp': 'detail.vbsp', 'skyname': 'sky_cont_overcast01_hdr', 'classname': 'worldspawn', 'mapversion': self.version, 'maxpropscreenwidth': '-1', 'detailmaterial': 'detail/detailsprites', 'id': '0'}
+
+    def add_solid(self, solid):
+        self.world.children.append(solid)
+
+    def __repr__(self):
+        self.name = ''
+        tmp = super(VMF, self).__repr__()
+        tmp = tmp[3:-1]
+        out = []
+        brackets = 0
+        for line in tmp.split("\r\n"):
+            if line == '}':
+                brackets -= 1
+            out.append('\t'*brackets + line)
+            if line == '{':
+                brackets += 1
+        return '\r\n'.join(out)
+
+    def write(self):
+        f = file(self.filename, 'w')
+        f.write(repr(self))
+        f.close()
+
+
+class DotInFilenameError(Exception):
+    pass
 
 
 def header():
@@ -60,7 +130,7 @@ def _solid_from_sides(sides):
         side_out.append('}')
         out.extend(side_out)
     out.append('}')
-    return '\n'.join(out)
+    return '\r\n'.join(out)
 
 
 def _wall_sides_from_line(line, w, h):
