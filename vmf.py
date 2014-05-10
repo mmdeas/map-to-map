@@ -105,10 +105,6 @@ def header():
 """
 
 
-def wall_from_line(*args):
-    return _solid_from_sides(_wall_sides_from_line(*args))
-
-
 def _solid_from_sides(sides):
     out = ['solid', '{', '"id" "{0}"'.format(solid_id.next())]
     for side in sides:
@@ -131,6 +127,40 @@ def _solid_from_sides(sides):
         out.extend(side_out)
     out.append('}')
     return '\r\n'.join(out)
+
+
+def floor_from_bounding_box(*args):
+    return _solid_from_sides(_floor_sides_from_bounding_box(*args))
+
+
+def _floor_sides_from_bounding_box(minx, maxx, miny, maxy, z, h):
+    sides = []
+
+    p1 = np.array([minx, miny, z])
+    p2 = np.array([minx, maxy, z])
+    p3 = np.array([maxx, maxy, z])
+    p4 = np.array([maxx, miny, z])
+    top = (p1, p2, p3, p4)
+    top = [np.array([round(x) for x in p], int) for p in top]
+    sides.append(top[:3])
+
+    p1 = np.array([minx, miny, z - h])
+    p2 = np.array([maxx, miny, z - h])
+    p3 = np.array([maxx, maxy, z - h])
+    p4 = np.array([minx, maxy, z - h])
+    bottom = (p1, p2, p3, p4)
+    bottom = [np.array([round(x) for x in p], int) for p in bottom]
+    sides.append(bottom[:3])
+
+    sides.append((bottom[1], top[0], top[3]))
+    sides.append((bottom[0], top[1], top[0]))
+    sides.append((bottom[3], top[2], top[1]))
+    sides.append((bottom[2], top[3], top[2]))
+    return sides
+
+
+def wall_from_line(*args):
+    return _solid_from_sides(_wall_sides_from_line(*args))
 
 
 def _wall_sides_from_line(line, w, h):

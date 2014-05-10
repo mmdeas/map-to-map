@@ -6,7 +6,7 @@ import vmf
 import sys
 import dl
 
-width = 10
+width = 5
 height = 100
 
 for arg in sys.argv[1:]:
@@ -31,6 +31,9 @@ for arg in sys.argv[1:]:
         maxy = max(maxy, start[1], end[1])
         vmff.add_solid(vmf.wall_from_line(line, width, height))
 
-    # floor = vmf.wall_from_line(((minx, (miny+maxy)/2), (maxx, (miny+maxy)/2)),
-    #                            maxy-miny, 10)
+    floor = vmf.floor_from_bounding_box(minx, maxx, miny, maxy, 0, 10)
+    ceiling = vmf.floor_from_bounding_box(minx, maxx, miny, maxy, height, 10)
+    vmff.add_solid(floor)
+    vmff.add_solid(ceiling)
+
     vmff.write()
