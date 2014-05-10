@@ -106,27 +106,25 @@ def header():
 
 
 def _solid_from_sides(sides):
-    out = ['solid', '{', '"id" "{0}"'.format(solid_id.next())]
-    for side in sides:
-        side_out = ['side', '{']
-        side_out.append('"id" "{0}"'.format(side_id.next()))
-        side_out.append('"plane" "({0}) ({1}) ({2})"'
-                        .format(*[' '.join([repr(point) for point in points])
-                                for points in side]))
-        u = _normalise(side[1] - side[0])
-        v = _normalise(side[2] - side[1])
-        side_out.append('"material" "BARRICADE/BOARD_DIFFUSE_01"')
-        side_out.append('"uaxis" "[{0} 0] 0.25"'
-                        .format(' '.join([repr(p) for p in u])))
-        side_out.append('"vaxis" "[{0} 0] 0.25"'
-                        .format(' '.join([repr(p) for p in v])))
-        side_out.append('"rotation" "0"')
-        side_out.append('"lightmapscale" "16"')
-        side_out.append('"smoothing_groups" "0"')
-        side_out.append('}')
-        out.extend(side_out)
-    out.append('}')
-    return '\r\n'.join(out)
+    solid = VMFObject('solid')
+    solid.attributes['id'] = solid_id.next()
+    for s in sides:
+        side = VMFObject('side')
+        side.attributes['id'] = side_id.next()
+        side.attributes['plane'] = "({0}) ({1}) ({2})".format(
+            *[' '.join([repr(point) for point in points]) for points in s])
+        u = _normalise(s[1] - s[0])
+        v = _normalise(s[2] - s[1])
+        side.attributes['material'] = "BARRICADE/BOARD_DIFFUSE_01"
+        side.attributes['uaxis'] = "[{0} 0] 0.25".format(
+            ' '.join([repr(p) for p in u]))
+        side.attributes['vaxis'] = "[{0} 0] 0.25".format(
+            ' '.join([repr(p) for p in v]))
+        side.attributes['rotation'] = 0
+        side.attributes['lightmapscale'] = 16
+        side.attributes['smoothing_groups'] = 0
+        solid.children.append(side)
+    return solid
 
 
 def floor_from_bounding_box(*args):
