@@ -22,6 +22,14 @@ for arg in sys.argv[1:]:
         im.save(arg + ".png")
         print "Image downloaded."
 
+    print "Thresholding...",
+    im = lines.threshold(im)
+    print "done."
+
+    print "Thinning lines...",
+    im = lines.zhangSuen(im)
+    print "dong."
+
     print "Calculating lines..."
     straights = lines.straight_lines(im, True, True)
     print "Lines calculated."

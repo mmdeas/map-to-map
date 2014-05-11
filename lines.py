@@ -8,15 +8,11 @@ MIN_LINE_LENGTH = 10
 
 
 def straight_lines(im, visual=False, log=False):
+    """
+    Works on a singly-connected binary image.
+    Use threshold and zhangSuen to achieve this.
+    """
     # threshold at 90%
-    if visual:
-        im = im.convert("RGBA")
-        im.show()
-    if log:
-        print "Thresholding and line thinning...",
-    im = _threshold(im)
-    if log:
-        print "done."
     if visual:
         im.show()
     pa = im.load()
@@ -170,7 +166,7 @@ def _is_black(colour):
     return colour == 0
 
 
-def _threshold(image, threshold=0.9):
+def threshold(image, threshold=0.9):
     # remove transparency
     image = image.convert("RGBA")
     pa = image.load()
@@ -181,14 +177,12 @@ def _threshold(image, threshold=0.9):
         else:
             pa[p] = (255, 255, 255, 255)
     image = image.convert("1")
-    pa = image.load()
-    zhangSuen(pa, image.size[0], image.size[1])
     return image
 
 
-# neighbours, transitions and zhangSuen modified from
+# _neighbours, _transitions and _zhangSuen adapted from
 # http://rosettacode.org/wiki/Zhang-Suen_thinning_algorithm
-def neighbours(x, y, image):
+def _neighbours(x, y, image):
     '''Return 8-neighbours of point p1 of picture, in order'''
     i = image
     x1, y1, x_1, y_1 = x+1, y-1, x-1, y+1
@@ -196,23 +190,28 @@ def neighbours(x, y, image):
             i[y_1, x], i[y_1, x_1], i[y, x_1], i[y1, x_1]]  # P6,P7,P8,P9
 
 
-def transitions(neighbours):
+def _transitions(neighbours):
     n = neighbours + neighbours[0:1]    # P2, ... P9, P2
     return sum((n1, n2) == (0, 255) for n1, n2 in zip(n, n[1:]))
 
 
-def zhangSuen(image, width, height):
+def zhangSuen(image):
+    zhangSuen(image.load(), image.size[0], image.size[1])
+    return image
+
+
+def _zhangSuen(image, width, height):
     changing1 = changing2 = [(-1, -1)]
     while changing1 or changing2:
         # Step 1
         changing1 = []
         for y in range(1, height - 1):
             for x in range(1, width - 1):
-                P2, P3, P4, P5, P6, P7, P8, P9 = n = neighbours(x, y, image)
+                P2, P3, P4, P5, P6, P7, P8, P9 = n = _neighbours(x, y, image)
                 if (image[y, x] == 255 and          # (Condition 0)
                         P4 * P6 * P8 == 0 and       # Condition 4
                         P2 * P4 * P6 == 0 and       # Condition 3
-                        transitions(n) == 1 and     # Condition 2
+                        _transitions(n) == 1 and     # Condition 2
                         2*255 <= sum(n) <= 6*255):  # Condition 1
                     changing1.append((x, y))
         for x, y in changing1:
@@ -221,11 +220,11 @@ def zhangSuen(image, width, height):
         changing2 = []
         for y in range(1, height - 1):
             for x in range(1, width - 1):
-                P2, P3, P4, P5, P6, P7, P8, P9 = n = neighbours(x, y, image)
+                P2, P3, P4, P5, P6, P7, P8, P9 = n = _neighbours(x, y, image)
                 if (image[y, x] == 255 and          # (Condition 0)
                         P2 * P6 * P8 == 0 and       # Condition 4
                         P2 * P4 * P8 == 0 and       # Condition 3
-                        transitions(n) == 1 and     # Condition 2
+                        _transitions(n) == 1 and     # Condition 2
                         2*255 <= sum(n) <= 6*255):  # Condition 1
                     changing2.append((x, y))
         for x, y in changing2:
