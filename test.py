@@ -51,7 +51,8 @@ for arg in sys.argv[1:]:
     straights = lines.straight_lines(im, True, True)
     print "Lines calculated."
     vmff = vmf.VMF(arg, True)
-    minx = maxx = miny = maxy = 0
+    minx = miny = 1e6
+    maxx = maxy = -1e6
     print "Generating VMF..."
     print "Generating walls...",
     for line in straights:
