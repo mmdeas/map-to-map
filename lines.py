@@ -7,12 +7,16 @@ MIN_LINE_LENGTH = 10
 # TODO: deal with 45 degree angles
 
 
-def straight_lines(im, visual=False):
+def straight_lines(im, visual=False, log=False):
     # threshold at 90%
     if visual:
         im = im.convert("RGBA")
         im.show()
+    if log:
+        print "Thresholding and line thinning...",
     im = _threshold(im)
+    if log:
+        print "done."
     if visual:
         im.show()
     pa = im.load()
@@ -38,12 +42,16 @@ def straight_lines(im, visual=False):
                 expanded.remove(node.pixel)
                 if node.length > MIN_LINE_LENGTH:
                     lines.append(node)
+                    if log:
+                        print len(lines), "found."
             elif len(children) == 1:
                 queue.put(children[0])
             else:
                 expanded.remove(node.pixel)
                 if node.length > MIN_LINE_LENGTH:
                     lines.append(node)
+                    if log:
+                        print len(lines), "found."
                 for child in children:
                     if child.pixel not in expanded:
                         child.root = node
