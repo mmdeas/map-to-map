@@ -13,22 +13,39 @@ for arg in sys.argv[1:]:
     try:
         int(arg)
     except ValueError:
-        print "Opening image...",
-        im = Image.open(arg)
-        print "done."
-    else:
-        print "Downloading image..."
+        raise ValueError("Arguments must be building identifiers (ints).")
+
+    # list of functions and extensions which should be applied
+    funcs = [
+        (lines.zhangSuen, '.zs'),
+        (lines.threshold, '.th'),
+        (lambda a: a, '')
+        ]
+
+    # try to find the most advanced cached image
+    im = None
+    for i, tup in zip(range(len(funcs)), funcs):
+        ext = tup[1]
+        try:
+            im = Image.open(''.join((arg, ext, '.png')))
+        except IOError:
+            pass
+        else:
+            # and then apply remaining functions (and cache at each step)
+            funcs = funcs[:i]
+            while funcs:
+                func, ext = funcs.pop()
+                im = func(im)
+                im.save('.'.join((arg, ext, '.png')))
+            break
+
+    # if still not found, download
+    if im is None:
         im = dl.building_to_image(arg)
-        im.save(arg + ".png")
-        print "Image downloaded."
-
-    print "Thresholding...",
-    im = lines.threshold(im)
-    print "done."
-
-    print "Thinning lines...",
-    im = lines.zhangSuen(im)
-    print "dong."
+        while funcs:
+            func, ext = funcs.pop()
+            im = func(im)
+            im.save(''.join((arg, ext, '.png')))
 
     print "Calculating lines..."
     straights = lines.straight_lines(im, True, True)
