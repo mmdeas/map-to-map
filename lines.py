@@ -196,7 +196,7 @@ def _transitions(neighbours):
 
 
 def zhangSuen(image):
-    zhangSuen(image.load(), image.size[0], image.size[1])
+    _zhangSuen(image.load(), image.size[0], image.size[1])
     return image
 
 
