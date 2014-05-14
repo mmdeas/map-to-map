@@ -68,7 +68,15 @@ class VMF(VMFObject):
         world = VMFObject("world")
         self.world = world
         self.children.append(world)
-        world.attributes = {'detailvbsp': 'detail.vbsp', 'skyname': 'sky_cont_overcast01_hdr', 'classname': 'worldspawn', 'mapversion': self.version, 'maxpropscreenwidth': '-1', 'detailmaterial': 'detail/detailsprites', 'id': '0'}
+        world.attributes = {
+            'detailvbsp': 'detail.vbsp',
+            'skyname': 'sky_cont_overcast01_hdr',
+            'classname': 'worldspawn',
+            'mapversion': self.version,
+            'maxpropscreenwidth': '-1',
+            'detailmaterial': 'detail/detailsprites',
+            'id': '0'
+            }
 
     def add_solid(self, solid):
         self.world.children.append(solid)
@@ -105,7 +113,7 @@ def header():
 """
 
 
-def _solid_from_sides(sides):
+def _solid_from_sides(sides, material="DEV/06_CONTDEV_SFX_CONCRETE"):
     solid = VMFObject('solid')
     solid.attributes['id'] = solid_id.next()
     for s in sides:
@@ -115,7 +123,7 @@ def _solid_from_sides(sides):
             *[' '.join([repr(point) for point in points]) for points in s])
         u = _normalise(s[1] - s[0])
         v = _normalise(s[2] - s[1])
-        side.attributes['material'] = "BARRICADE/BOARD_DIFFUSE_01"
+        side.attributes['material'] = material
         side.attributes['uaxis'] = "[{0} 0] 0.25".format(
             ' '.join([repr(p) for p in u]))
         side.attributes['vaxis'] = "[{0} 0] 0.25".format(
@@ -128,7 +136,10 @@ def _solid_from_sides(sides):
 
 
 def floor_from_bounding_box(*args):
-    return _solid_from_sides(_floor_sides_from_bounding_box(*args))
+    return _solid_from_sides(
+        _floor_sides_from_bounding_box(*args),
+        "DEV/11_CONTDEV_SFX_GRAVEL"
+        )
 
 
 def _floor_sides_from_bounding_box(minx, maxx, miny, maxy, z, h):
