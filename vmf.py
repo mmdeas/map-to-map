@@ -14,14 +14,6 @@ def _normalise(vector):
     return vector / np.linalg.norm(vector)
 
 
-def _random_joined_lines(n):
-    last_end = np.array((0, 0, 0))
-    for i in xrange(n):
-        new_end = np.array([randint(0, 9999), randint(0, 9999), 0])
-        yield (last_end, new_end)
-        last_end = new_end
-
-
 class VMFObject(object):
 
     def __init__(self, name):
@@ -104,14 +96,6 @@ class VMF(VMFObject):
 
 class DotInFilenameError(Exception):
     pass
-
-
-def header():
-    return """versioninfo
-{
-    "mapversion" "0"
-}
-"""
 
 
 def _solid_from_sides(sides, material="DEV/06_CONTDEV_SFX_CONCRETE"):
