@@ -50,7 +50,8 @@ class VMF(VMFObject):
         head, tail = os.path.split(filename)
         if '.' in os.path.splitext(tail)[0]:
             if dedot:
-                tail = tail.split('.')[0]
+                # replace all '.' with '-' except last '.vmf'
+                tail = '-'.join(tail.split('.')[:-1])
                 tail += '.vmf'
                 filename = os.path.join(head, tail)
             else:
