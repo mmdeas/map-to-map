@@ -1,12 +1,79 @@
 from itertools import count
+import pickle
 import urllib2
 import re
-
-from PIL import Image
 from StringIO import StringIO
 
+from PIL import Image
 
-def building_to_image(bf):
+import lines
+
+
+def building_to_images(bf):
+    request = urllib2.urlopen("http://campus.warwick.ac.uk/?bf={0}".format(bf))
+    if request.getcode() != 200:
+        raise BuildingError("Received code from server: " + request.getcode())
+    html = request.read()
+    m = re.findall(r"<option value='(\d+)'", html)
+    if not m:
+        raise BuildingError("Could not find list of floors.")
+    # initiate with current floor
+    floor_bfs = [bf]
+    # ignore first because it is link back to campus map
+    floor_bfs.extend(m[2:])
+    pickle.dump(floor_bfs, file(bf + ".bfs", 'w'))
+    images = []
+    for bf in floor_bfs:
+        images.append(get_processed_image(bf))
+    return images
+
+
+def get_processed_image(bf):
+    print "get_processed_image({0})".format(bf)
+    # list of functions and extensions which should be applied
+    funcs = [
+        (lines.zhangSuen, '.zs'),
+        (lines.threshold, '.th'),
+        (lambda a: a, '')
+        ]
+
+    # try to find the most advanced cached image
+    im = None
+    for i, tup in zip(range(len(funcs)), funcs):
+        ext = tup[1]
+        try:
+            fname = ''.join((bf, ext, '.png'))
+            im = Image.open(fname)
+        except IOError:
+            pass
+        else:
+            print "Found {0}. Applying functions from there.".format(fname)
+            # and then apply remaining functions (and cache at each step)
+            funcs = funcs[:i]
+            while funcs:
+                func, ext = funcs.pop()
+                print "Applying", func, "...",
+                im = func(im)
+                print "done."
+                im.save(''.join((bf, ext, '.png')))
+            break
+
+    # if still not found, download
+    if im is None:
+        print "No image found for {0}. Downloading...".format(bf),
+        im = floor_to_image(bf)
+        print "done."
+        while funcs:
+            func, ext = funcs.pop()
+            print "Applying", func, "...",
+            im = func(im)
+            print "done."
+            im.save(''.join((bf, ext, '.png')))
+
+    return im
+
+
+def floor_to_image(bf):
     request = urllib2.urlopen("http://campus.warwick.ac.uk/?bf={0}".format(bf))
     if request.getcode() != 200:
         raise BuildingError("Received code from server: " + request.getcode())
@@ -29,7 +96,7 @@ def building_to_image(bf):
     x = 0
     try:
         while True:
-            print "Requesting " + url.format(zoom, x, y)
+            # print "Requesting " + url.format(zoom, x, y)
             request = urllib2.urlopen(url.format(zoom, x, y))
             success = request.getcode() == 200
             if success:
@@ -50,7 +117,8 @@ def building_to_image(bf):
     try:
         for y in count(1):
             for x in range(x_stop):
-                print "Requesting {0}".format((x, y))
+                # print "Requesting {0}".format((x, y))
+                print '.',
                 request = urllib2.urlopen(url.format(zoom, x, y))
                 if request.getcode() != 200:
                     raise TileError(request)
@@ -84,5 +152,6 @@ class TileError(Exception):
 if __name__ == "__main__":
     import sys
     for arg in sys.argv[1:]:
-        im = building_to_image(arg)
-        im.save("bf{0}.png".format(arg))
+        imgs = building_to_images(arg)
+        for im in imgs:
+            im.save("bf{0}.png".format(arg))

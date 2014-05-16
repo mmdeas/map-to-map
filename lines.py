@@ -1,4 +1,4 @@
-from Queue import Queue
+from Queue import Queue, LifoQueue
 from itertools import combinations, product
 from math import acos, pi
 
@@ -54,42 +54,45 @@ def straight_lines(im, visual=False, log=False):
                         child.length = 1
                         queue.put(child)
 
-    lines_by_endpoints = {}
-    for line in lines:
-        try:
-            lines_by_endpoints[line.root.pixel].append(line)
-        except KeyError:
-            lines_by_endpoints[line.root.pixel] = [line]
-        try:
-            lines_by_endpoints[line.pixel].append(line)
-        except KeyError:
-            lines_by_endpoints[line.pixel] = [line]
-
-    for endpoint in lines_by_endpoints:
-        for pair in combinations(lines_by_endpoints[endpoint], 2):
-            if _should_combine(*pair):
-                if pair[0] not in lines or pair[1] not in lines:
-                    continue
-                # combine line
-                ends = [pair[0].root.pixel, pair[0].pixel,
-                        pair[1].root.pixel, pair[1].pixel]
-                ends = [e for e in ends if e != endpoint]
-                newroot = QueueObject(ends[0], None, None, None, 0, None)
-                new = QueueObject(ends[1], newroot, newroot, None,
-                                  pair[0].length + pair[1].length, None)
-                lines.remove(pair[0])
-                lines.remove(pair[1])
-                lines.append(new)
-                lines_by_endpoints[endpoint].remove(pair[0])
-                lines_by_endpoints[endpoint].remove(pair[1])
-                lines_by_endpoints[new.root.pixel].remove(pair[0])
-                lines_by_endpoints[new.root.pixel].append(new)
-                lines_by_endpoints[new.pixel].remove(pair[1])
-                lines_by_endpoints[new.pixel].append(new)
+    # lines_by_endpoints = {}
+    # for line in lines:
+    #     try:
+    #         lines_by_endpoints[line.root.pixel].append(line)
+    #     except KeyError:
+    #         lines_by_endpoints[line.root.pixel] = [line]
+    #     try:
+    #         lines_by_endpoints[line.pixel].append(line)
+    #     except KeyError:
+    #         lines_by_endpoints[line.pixel] = [line]
+    #
+    # for endpoint in lines_by_endpoints:
+    #     for pair in combinations(lines_by_endpoints[endpoint], 2):
+    #         if _should_combine(*pair):
+    #             if pair[0] not in lines or pair[1] not in lines:
+    #                 continue
+    #             # combine line
+    #             ends = [pair[0].root.pixel, pair[0].pixel,
+    #                     pair[1].root.pixel, pair[1].pixel]
+    #             ends = [e for e in ends if e != endpoint]
+    #             newroot = QueueObject(ends[0], None, None, None, 0, None)
+    #             new = QueueObject(ends[1], newroot, newroot, None,
+    #                               pair[0].length + pair[1].length, None)
+    #             lines.remove(pair[0])
+    #             lines.remove(pair[1])
+    #             lines.append(new)
+    #             lines_by_endpoints[endpoint].remove(pair[0])
+    #             lines_by_endpoints[endpoint].remove(pair[1])
+    #             lines_by_endpoints[new.root.pixel].remove(pair[0])
+    #             lines_by_endpoints[new.root.pixel].append(new)
+    #             lines_by_endpoints[new.pixel].remove(pair[1])
+    #             lines_by_endpoints[new.pixel].append(new)
     return lines
 
 
 def _should_combine(node1, node2):
+    if (node1.pixel == node1.root.pixel
+        or node2.pixel == node2.root.pixel):
+            return False
     angle = _angle(node1, node2)
     max_angle1 = _vangle([node1.length, 1], [1, 0])
     max_angle2 = _vangle([node2.length, 1], [1, 0])
@@ -98,13 +101,20 @@ def _should_combine(node1, node2):
 
 
 def _angle(node1, node2):
+    print node1, node2, '\t',
     v1 = map(int.__sub__, node1.root.pixel, node1.pixel)
     v2 = map(int.__sub__, node2.root.pixel, node2.pixel)
     return _vangle(v1, v2)
 
 
 def _vangle(v1, v2):
-    return acos(sum(map(int.__mul__, v1, v2))/_mag(v1)/_mag(v2))
+    print v1, v2, _mag(v1), _mag(v2)
+    tmp = sum(map(int.__mul__, v1, v2))/_mag(v1)/_mag(v2)
+    if tmp > 1:
+        tmp = 1
+    if tmp < -1:
+        tmp = -1
+    return acos(tmp)
 
 
 def _mag(v):
@@ -140,6 +150,8 @@ class QueueObject(object):
 
     def expand(self):
         children = []
+        dirs = [d for d in self.directions if d[0] * d[1] == 0]
+        dirs.extend([d for d in self.directions if d not in dirs])
         for direction in self.directions:
             new = tuple(map(lambda x, y: x+y, self.pixel, direction))
             try:

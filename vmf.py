@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 import numpy as np
-from random import randint
 from itertools import count
 import re
 import os
