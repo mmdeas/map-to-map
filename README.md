@@ -1,4 +1,4 @@
 map-to-map
 ==========
 
-Turns maps into maps.
+Maps maps to maps.
